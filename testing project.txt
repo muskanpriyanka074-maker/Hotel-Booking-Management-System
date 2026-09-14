@@ -1,0 +1,824 @@
+ if selected == "Dashboard":
+
+        pass
+        st.title("🏨 Hotel Dashboard")
+        st.caption("Welcome back, Administrator 👋")
+
+        try:
+
+            headers = {}
+
+            if st.session_state.token != "":
+                headers["Authorization"] = f"Bearer {st.session_state.token}"
+
+            response = requests.get(
+                "http://127.0.0.1:8000/bookings",
+                headers=headers
+            )
+
+            if response.status_code == 200:
+
+                bookings = response.json()
+
+                df = pd.DataFrame(bookings)
+
+                total_bookings = len(df)
+
+                if "total_amount" in df.columns:
+                    revenue = df["total_amount"].sum()
+                else:
+                    revenue = 0
+
+                if "customer_name" in df.columns:
+                    customers = df["customer_name"].nunique()
+                else:
+                    customers = 0
+
+                if "room_type" in df.columns:
+                    available = max(0, 50 - len(df))
+                else:
+                    available = 50
+
+            else:
+
+                df = pd.DataFrame()
+
+                total_bookings = 0
+                revenue = 0
+                customers = 0
+                available = 50
+
+        except:
+
+            df = pd.DataFrame()
+
+            total_bookings = 0
+            revenue = 0
+            customers = 0
+            available = 50
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        with c1:
+
+            st.metric(
+                "📋 Total Bookings",
+                total_bookings
+            )
+
+        with c2:
+
+            st.metric(
+                "💰 Revenue",
+                f"₹ {revenue:,.0f}"
+            )
+
+        with c3:
+
+            st.metric(
+                "👥 Customers",
+                customers
+            )
+
+        with c4:
+
+            st.metric(
+                "🛏 Available Rooms",
+                available
+            )
+
+        st.divider()
+
+        left, right = st.columns([2,1])
+
+        with left:
+
+            st.subheader("📋 Recent Bookings")
+
+            if len(df) > 0:
+
+                show = df.copy()
+
+                st.dataframe(
+                    show.tail(10),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            else:
+
+                st.info("No booking records found.")
+
+        with right:
+
+            st.subheader("📊 Room Distribution")
+
+            if len(df) > 0 and "room_type" in df.columns:
+
+                chart = px.pie(
+                    df,
+                    names="room_type",
+                    hole=0.5,
+                    title="Room Types"
+                )
+
+                st.plotly_chart(
+                    chart,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info("No chart available.")
+
+        st.divider()
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+
+            st.subheader("💵 Revenue by Room")
+
+            if len(df) > 0 and "room_type" in df.columns:
+
+                revenue_df = (
+                    df.groupby("room_type")["total_amount"]
+                    .sum()
+                    .reset_index()
+                )
+
+                fig = px.bar(
+                    revenue_df,
+                    x="room_type",
+                    y="total_amount",
+                    color="room_type",
+                    text_auto=True
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info("No revenue data.")
+
+        with c2:
+
+            st.subheader("🏆 Quick Summary")
+
+            st.success(f"✔ Total Customers : {customers}")
+
+            st.success(f"✔ Revenue : ₹ {revenue:,.0f}")
+
+            st.success(f"✔ Bookings : {total_bookings}")
+
+            st.success(f"✔ Rooms Available : {available}")
+
+        st.divider()
+
+        st.subheader("📅 Today's Status")
+
+        a, b, c = st.columns(3)
+
+        with a:
+
+            st.info("🟢 Check-ins\n\n12")
+
+        with b:
+
+            st.warning("🟡 Check-outs\n\n7")
+
+        with c:
+
+            st.error("🔴 Pending Payments\n\n4")
+
+    elif selected == "Add Booking":
+
+        pass
+
+    elif selected == "Add Booking":
+
+     st.title("🛎 New Booking")
+     st.caption("Create a new hotel reservation")
+
+    with st.form("booking_form"):
+
+        st.subheader("Guest Information")
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+            customer_name = st.text_input("Guest Name")
+            email = st.text_input("Email")
+            phone = st.text_input("Phone Number")
+
+        with c2:
+            room_type = st.selectbox(
+                "Room Type",
+                [
+                    "Standard",
+                    "Deluxe",
+                    "Executive",
+                    "Suite"
+                ]
+            )
+
+            guests = st.number_input(
+                "Guests",
+                min_value=1,
+                max_value=10,
+                value=1
+            )
+
+        st.divider()
+
+        c3, c4 = st.columns(2)
+
+        with c3:
+            check_in = st.date_input(
+                "Check In",
+                value=date.today()
+            )
+
+        with c4:
+            check_out = st.date_input(
+                "Check Out",
+                value=date.today()
+            )
+
+        nights = max(1, (check_out - check_in).days)
+
+        st.write(f"**Total Nights :** {nights}")
+
+        st.divider()
+
+        special_request = st.text_area(
+            "Special Request"
+        )
+
+        room_price = {
+
+            "Standard":2500,
+
+            "Deluxe":4000,
+
+            "Executive":6500,
+
+            "Suite":9000
+
+        }
+
+        total_amount = room_price[room_type] * nights
+
+        st.metric(
+            "Estimated Amount",
+            f"₹ {total_amount:,.0f}"
+        )
+
+        submit = st.form_submit_button(
+            "Confirm Booking",
+            use_container_width=True
+        )
+
+    if submit:
+
+        payload = {
+
+            "customer_name": customer_name,
+
+            "email": email,
+
+            "phone": phone,
+
+            "room_type": room_type,
+
+            "guests": guests,
+
+            "check_in": str(check_in),
+
+            "check_out": str(check_out),
+
+            "total_amount": total_amount,
+
+            "special_request": special_request
+
+        }
+
+        headers = {}
+
+        if st.session_state.token != "":
+            headers["Authorization"] = f"Bearer {st.session_state.token}"
+
+        try:
+
+            response = requests.post(
+
+                "http://127.0.0.1:8000/bookings",
+
+                json=payload,
+
+                headers=headers
+
+            )
+
+            if response.status_code in [200,201]:
+
+                st.success("🎉 Booking Created Successfully")
+
+                st.balloons()
+
+            else:
+
+                st.error(response.text)
+
+        except Exception as e:
+
+            st.error(f"FastAPI Error\n\n{e}")
+
+
+
+
+    elif selected == "View Bookings":
+
+     st.title("📋 Booking Management")
+     st.caption("Manage all hotel bookings")
+
+    headers = {}
+
+    if st.session_state.token != "":
+        headers["Authorization"] = f"Bearer {st.session_state.token}"
+
+    try:
+
+        response = requests.get(
+            "http://127.0.0.1:8000/bookings",
+            headers=headers
+        )
+
+        if response.status_code == 200:
+
+            bookings = response.json()
+
+            if len(bookings) == 0:
+
+                st.warning("No Bookings Found")
+
+            else:
+
+                df = pd.DataFrame(bookings)
+
+                st.divider()
+
+                col1, col2 = st.columns([2, 1])
+
+                with col1:
+                    search = st.text_input("🔍 Search Customer")
+
+                with col2:
+
+                    if "room_type" in df.columns:
+
+                        room = st.selectbox(
+                            "Room Type",
+                            ["All"] + list(df["room_type"].unique())
+                        )
+
+                    else:
+
+                        room = "All"
+
+                if search != "" and "customer_name" in df.columns:
+
+                    df = df[
+                        df["customer_name"].str.contains(
+                            search,
+                            case=False,
+                            na=False
+                        )
+                    ]
+
+                if room != "All" and "room_type" in df.columns:
+
+                    df = df[df["room_type"] == room]
+
+                st.divider()
+
+                st.dataframe(
+                    df,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                st.divider()
+
+                csv = df.to_csv(index=False).encode("utf-8")
+
+                st.download_button(
+                    "📄 Download CSV",
+                    csv,
+                    "hotel_bookings.csv",
+                    "text/csv",
+                    use_container_width=True
+                )
+
+                st.divider()
+
+                st.subheader("Booking Actions")
+
+                if "id" in df.columns:
+
+                    booking_id = st.selectbox(
+                        "Select Booking ID",
+                        df["id"]
+                    )
+
+                    c1, c2 = st.columns(2)
+
+                    with c1:
+
+                        if st.button(
+                            "✏ Edit Booking",
+                            use_container_width=True
+                        ):
+                            st.info("Edit feature coming soon.")
+
+                    with c2:
+
+                        if st.button(
+                            "🗑 Delete Booking",
+                            use_container_width=True
+                        ):
+
+                            delete = requests.delete(
+                                f"http://127.0.0.1:8000/bookings/{booking_id}",
+                                headers=headers
+                            )
+
+                            if delete.status_code == 200:
+
+                                st.success("Booking Deleted Successfully")
+                                st.rerun()
+
+                            else:
+
+                                st.error("Unable to Delete Booking")
+
+        else:
+
+            st.error("Unable to Fetch Booking Data")
+
+    except Exception as e:
+
+        st.error(e)
+
+# ---------------- Analytics ----------------
+    elif selected == "Analytics":
+
+    st.title("📊 Hotel Analytics Dashboard")
+
+    st.title("📊 Hotel Analytics Dashboard")
+    st.caption("Business Insights & Reports")
+
+    headers = {}
+
+    if st.session_state.token != "":
+        headers["Authorization"] = f"Bearer {st.session_state.token}"
+
+    try:
+
+        response = requests.get(
+            "http://127.0.0.1:8000/bookings",
+            headers=headers
+        )
+
+        if response.status_code == 200:
+
+            bookings = response.json()
+
+            if len(bookings) == 0:
+
+                st.warning("No Booking Data Available")
+
+            else:
+
+                df = pd.DataFrame(bookings)
+
+                c1, c2, c3, c4 = st.columns(4)
+
+                total_bookings = len(df)
+
+                total_revenue = (
+                    df["total_amount"].sum()
+                    if "total_amount" in df.columns
+                    else 0
+                )
+
+                avg_booking = (
+                    round(df["total_amount"].mean(), 2)
+                    if "total_amount" in df.columns
+                    else 0
+                )
+
+                total_customers = (
+                    df["customer_name"].nunique()
+                    if "customer_name" in df.columns
+                    else 0
+                )
+
+                c1.metric("📋 Bookings", total_bookings)
+                c2.metric("💰 Revenue", f"₹ {total_revenue:,.0f}")
+                c3.metric("👥 Customers", total_customers)
+                c4.metric("📈 Avg Booking", f"₹ {avg_booking}")
+
+                st.divider()
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+
+                    if "room_type" in df.columns:
+
+                        fig = px.pie(
+                            df,
+                            names="room_type",
+                            hole=0.5,
+                            title="Room Distribution"
+                        )
+
+                        st.plotly_chart(
+                            fig,
+                            use_container_width=True
+                        )
+
+                with col2:
+
+                    if "room_type" in df.columns:
+
+                        revenue = (
+                            df.groupby("room_type")["total_amount"]
+                            .sum()
+                            .reset_index()
+                        )
+
+                        fig = px.bar(
+                            revenue,
+                            x="room_type",
+                            y="total_amount",
+                            color="room_type",
+                            text_auto=True
+                        )
+
+                        st.plotly_chart(
+                            fig,
+                            use_container_width=True
+                        )
+
+                st.divider()
+
+                if "guests" in df.columns:
+
+                    guest = (
+                        df.groupby("guests")
+                        .size()
+                        .reset_index(name="Bookings")
+                    )
+
+                    fig = px.bar(
+                        guest,
+                        x="guests",
+                        y="Bookings",
+                        color="Bookings",
+                        text_auto=True
+                    )
+
+                    st.plotly_chart(
+                        fig,
+                        use_container_width=True
+                    )
+
+                st.divider()
+
+                st.subheader("Revenue Summary")
+
+                if "room_type" in df.columns:
+
+                    revenue = (
+                        df.groupby("room_type")["total_amount"]
+                        .sum()
+                        .reset_index()
+                    )
+
+                    st.dataframe(
+                        revenue,
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+        else:
+
+            st.error("Unable to Fetch Data")
+
+    except Exception as e:
+
+        st.error(e)
+# ---------------- Profile ----------------
+
+    elif selected == "Profile":
+
+    pass
+
+    st.title("👤 Admin Profile")
+    st.caption("Manage your account information")
+
+    col1, col2 = st.columns([1, 3])
+
+    with col1:
+
+        st.image(
+            "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            width=180
+        )
+
+    with col2:
+
+        st.subheader("Administrator")
+
+        st.text_input(
+            "Full Name",
+            value="Admin User",
+            disabled=True
+        )
+
+        st.text_input(
+            "Email",
+            value="admin@gmail.com",
+            disabled=True
+        )
+
+        st.text_input(
+            "Hotel Name",
+            value="Luxury Hotel",
+            disabled=True
+        )
+
+        st.text_input(
+            "Role",
+            value="System Administrator",
+            disabled=True
+        )
+
+    st.divider()
+
+    st.subheader("📊 Profile Statistics")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric("Experience", "5 Years")
+    c2.metric("Bookings Managed", "250")
+    c3.metric("Rating", "⭐ 4.9")
+
+    st.divider()
+
+    st.subheader("🔐 Change Password")
+
+    current_password = st.text_input(
+        "Current Password",
+        type="password"
+    )
+
+    new_password = st.text_input(
+        "New Password",
+        type="password"
+    )
+
+    confirm_password = st.text_input(
+        "Confirm Password",
+        type="password"
+    )
+
+    if st.button(
+        "Update Password",
+        use_container_width=True
+    ):
+
+        if new_password == confirm_password:
+
+            st.success("Password Updated Successfully")
+
+        else:
+
+            st.error("Passwords do not match.")
+
+    st.divider()
+
+    st.subheader("⚙ Preferences")
+
+    dark_mode = st.toggle(
+        "Dark Mode",
+        value=False
+    )
+
+    notifications = st.toggle(
+        "Email Notifications",
+        value=True
+    )
+
+    auto_backup = st.toggle(
+        "Automatic Backup",
+        value=True
+    )
+
+    st.divider()
+
+    st.subheader("📄 Account Information")
+
+    st.info(
+        """
+        **Application:** Hotel Booking Management System
+
+        **Frontend:** Streamlit
+
+        **Backend:** FastAPI
+
+        **Database:** PostgreSQL
+
+        **Version:** 1.0
+        """
+    )
+
+# ---------------- Settings ----------------
+
+    elif selected == "Settings":
+
+    pass
+
+    st.title("⚙ Settings")
+
+    st.subheader("Application Settings")
+
+    theme = st.selectbox(
+        "Theme",
+        ["Light", "Dark"]
+    )
+
+    language = st.selectbox(
+        "Language",
+        ["English", "Hindi"]
+    )
+
+    currency = st.selectbox(
+        "Currency",
+        ["INR", "USD"]
+    )
+
+    st.divider()
+
+    st.subheader("Notification Settings")
+
+    email = st.checkbox(
+        "Email Notifications",
+        value=True
+    )
+
+    sms = st.checkbox(
+        "SMS Notifications",
+        value=False
+    )
+
+    st.divider()
+
+    st.subheader("Backup")
+
+    if st.button(
+        "Create Backup",
+        use_container_width=True
+    ):
+        st.success("Backup Created Successfully")
+
+    st.divider()
+
+    if st.button(
+        "Save Settings",
+        use_container_width=True
+    ):
+        st.success("Settings Saved Successfully")
+
+# ---------------- Logout ----------------
+
+    elif selected == "Logout":
+
+
+     st.session_state.logged_in = False
+    st.session_state.token = ""
+
+    st.success("Logged Out Successfully")
+
+    st.rerun()
+
+
+
+
+
+  
